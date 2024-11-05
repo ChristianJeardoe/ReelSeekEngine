@@ -25,7 +25,7 @@ To run this program you will need these Python packages along with Python 3.x in
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/
+   git clone https://github.com/ChristianJeardoe/ReelSeekEngine.git
 2. Install required Python packages:
    ```bash
    pip install pandas
@@ -34,6 +34,8 @@ To run this program you will need these Python packages along with Python 3.x in
    ```bash
    python app.py
 Note: It may take a few seconds to run as it need to frame the dataset
+
+DISCLAIMER: My data files were too large to be added to GitHub (I had no idea that would be an issue, it will be resolved before final due date) Here is a link to the Google drive they are in so you can download them (You only need the condensed_movies_with_cast.csv file for the main program to work) Link: https://drive.google.com/drive/folders/14kBdoN8o2sJtLdsCf0SsTJKNUpY4B4oN?usp=drive_link
 
 ## Usage
 
