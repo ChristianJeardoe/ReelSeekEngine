@@ -26,24 +26,19 @@ To run this program you will need these Python packages along with Python 3.x in
 1. Clone the repository:
    ```bash
    git clone https://github.com/ChristianJeardoe/ReelSeekEngine.git
-2. Install required Python packages:
+2. Download .csv data file from Google drive link: https://drive.google.com/drive/folders/14kBdoN8o2sJtLdsCf0SsTJKNUpY4B4oN?usp=drive_link
+3. Ensure `condensed_movies_with_cast.csv` is inside of the `processed_data` folder.
+4. Install required Python packages:
    ```bash
    pip install pandas
-3. Ensure `condensed_movies_with_cast.csv` is inside of the `processed_data` folder.
-4. Run the main program:
+5. Run the main program:
    ```bash
    python app.py
-Note: It may take a few seconds to run as it need to frame the dataset
-
-DISCLAIMER: My data files were too large to be added to GitHub (I had no idea that would be an issue, it will be resolved before final due date) Here is a link to the Google drive they are in so you can download them (You only need the condensed_movies_with_cast.csv file for the main program to work) Link: https://drive.google.com/drive/folders/14kBdoN8o2sJtLdsCf0SsTJKNUpY4B4oN?usp=drive_link
+Note: It may take a few seconds to start as it needs to frame the dataset
 
 ## Usage
 
-You will be prompted to enter 3 to 10 movies of your choice along with the year they came out. This will be changed in the next checkpoint, this is just a temporary UI. This can be done by entering the names and years by heart, looking through the `condenced_movies_with_cast.csv` file, or by looking up what you need on Google. If title doesn't exist or the year doesn't match with the title it'll let you know and reprompt you.
-
-Once you have entered all of the movies you want (3 - 10 movies) press Enter to finish.
-
-You will then be asked to enter 1 or 2 for the formatting of your results. Entering 1 will give you just a basic output with the top 10 movies along with their titles and release years. Entering 2 will give you a much more detailed output including the title of the movie, Genres, Names of the people associated with the movie (actors, directors, and writers), the rating (out of 10), the number of votes, and the hybrid BM25 score it got.
+You will be prompted to enter 3 to 5 movies of your choice. As you type the title in a drop down menu will appear with option to select from. Just click on your movie when you see it and it'll be added to your list below. If your movie is not showing up in the list you can enter in its year of release in the year section next to it, this will filter all results in the drop down by movies from that year. Once you have selected at least 3 movies press the "Get Recommendations" button and your top ten movie suggestions will appear.
 
 ## How It Works
 
