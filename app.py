@@ -1,8 +1,12 @@
+from flask import Flask, render_template, request, jsonify
 import pandas as pd
 from collections import defaultdict
 import math
 
+
 ### This is the main program that will take user input and recommend movies based on the input ###
+
+app = Flask(__name__)
 
 # Load the CSV file
 file_path = 'processed_data/condensed_movies_with_cast.csv'
@@ -81,7 +85,7 @@ def search_movies_bm25_hybrid(query, exclude_ids=set(), alpha=0.55, beta=0.35, g
     for term in query_terms:
         if term in inverted_index:
             for doc_id in inverted_index[term]:
-                if doc_id not in exclude_ids:  # Exclude document IDs of users movies
+                if doc_id not in exclude_ids:
                     bm25_score = calculate_bm25(term, doc_id)
                     doc_scores[doc_id] += bm25_score
 
@@ -96,68 +100,64 @@ def search_movies_bm25_hybrid(query, exclude_ids=set(), alpha=0.55, beta=0.35, g
     sorted_docs = sorted(hybrid_scores, key=lambda x: x[1], reverse=True)
     return sorted_docs
 
-# Function to collect user input for favorite movies and ensure they are found in the dataset
-def get_user_favorite_movies():
-    user_movies = []
-    
-    print("Please enter 3 to 10 movies you like. Once you have entered at least 3 movies, you can press Enter to stop.")
 
-    while len(user_movies) < 10:
-        title = input(f"Enter the title of movie {len(user_movies) + 1}: ").strip().lower()
-        if not title and len(user_movies) >= 3:
-            break
-        year = input(f"Enter the release year of '{title}': ").strip()
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    recommendations = []
+    if request.method == 'POST':
 
-        # Check if the movie exists in the dataset
-        matching_movies = movies_df[(movies_df['primaryTitle_processed'] == title) & (movies_df['startYear'] == year)]
-        if matching_movies.empty:
-            print(f"Sorry, '{title}' ({year}) was not found in the dataset. Please try again.")
-        else:
-            user_movies.append((title, year))
-            if len(user_movies) >= 10:  # Stop after 10 movies
-                break
+        # Extract user provided favorite movies
+        user_movies = []
+        for i in range(1, 6):
+            title = request.form.get(f'title{i}', '').strip().lower()
+            year = request.form.get(f'year{i}', '').strip()
+            if title and year:
+                user_movies.append((title.lower(), year))
 
-    return user_movies
+        # Construct query from user provided favorite movies and identify their IDs
+        if len(user_movies) >= 3:
+            query_terms = []
+            exclude_ids = set()
+            for title, year in user_movies:
+                matching_movies = movies_df[(movies_df['primaryTitle'].str.lower() == title) & (movies_df['startYear'] == year)]
+                if not matching_movies.empty:
+                    query_terms.extend(matching_movies['Combined_Text'].iloc[0].split())
+                    exclude_ids.update(matching_movies.index)  # Add movie index to exclude set
+            query = " ".join(query_terms)
+
+            # Perform the search using BM25 hybrid, excluding user fav movie IDs
+            results = search_movies_bm25_hybrid(query, exclude_ids=exclude_ids)
+
+            # Get the top 10 recommendations
+            for idx, (doc_id, _) in enumerate(results[:10], 1):
+                title = movies_df.loc[doc_id, 'primaryTitle'].title()
+                year = movies_df.loc[doc_id, 'startYear']
+                recommendations.append(
+                    f"{idx}. Title: {title} | Year: {year}"
+                )
+
+    return render_template('index.html', recommendations=recommendations)
+
+# Autocomplete
+@app.route('/autocomplete', methods=['GET'])
+def autocomplete():
+    term = request.args.get('term', '').strip().lower()
+    year = request.args.get('year', '').strip()
+    if year:
+        matching_movies = movies_df[(movies_df['primaryTitle'].str.contains(term, case=False, na=False)) & (movies_df['startYear'] == year)].copy()
+    else:
+        matching_movies = movies_df[movies_df['primaryTitle'].str.contains(term, case=False, na=False)].copy()
+    matching_movies['match_priority'] = matching_movies['primaryTitle'].apply(lambda x: x.startswith(term))
+    matching_movies = matching_movies.sort_values(by='match_priority', ascending=False).head(10)
+    suggestions = []
+    for _, row in matching_movies.iterrows():
+        suggestions.append({
+            'label': f"{row['primaryTitle'].title()} ({row['startYear']})",
+            'value': row['primaryTitle'],
+            'year': row['startYear']
+        })
+    return jsonify(suggestions)
 
 
-# Construct query from users movies and identify their IDs
-def construct_query_from_favorites(user_movies):
-    query_terms = []
-    exclude_ids = set()
-    for title, year in user_movies:
-        matching_movies = movies_df[(movies_df['primaryTitle_processed'] == title) & (movies_df['startYear'] == year)]
-        if not matching_movies.empty:
-            query_terms.extend(matching_movies['Combined_Text'].iloc[0].split())
-            exclude_ids.update(matching_movies.index)
-    return " ".join(query_terms), exclude_ids
-
-
-def main():
-    user_movies = get_user_favorite_movies()
-
-    # Construct query and get IDs of movies to exclude
-    query, exclude_ids = construct_query_from_favorites(user_movies)
-
-    # Perform the search using BM25 hybrid, excluding user given movie IDs
-    results = search_movies_bm25_hybrid(query, exclude_ids=exclude_ids)
-
-    # Display the top 10 results (I made one type for basic information and one for detailed information to help yall see the things that went into the scoring)
-    output_type = int(input("\nEnter 1 to display basic movie information, or 2 to display detailed information: "))
-    print("\nTop 10 Recommended Movies:")
-    if output_type == 1:
-        for idx, (doc_id, score) in enumerate(results[:10], 1):
-            title = movies_df.loc[doc_id, 'primaryTitle_original']
-            year = movies_df.loc[doc_id, 'startYear']
-            print(f"{idx}. Title: {title} | Year: {year}")
-    elif output_type == 2:
-        for idx, (doc_id, score) in enumerate(results[:10], 1):
-            title = movies_df.loc[doc_id, 'primaryTitle_original']
-            genres = movies_df.loc[doc_id, 'genres']
-            names = movies_df.loc[doc_id, 'primaryName']
-            rating = movies_df.loc[doc_id, 'averageRating']
-            votes = movies_df.loc[doc_id, 'numVotes']
-            print(f"{idx}. Title: {title} | Genres: {genres} | Names: {names} | Rating: {rating} | Votes: {votes} | Score: {score:.4f}")
-    
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    app.run(debug=True)
