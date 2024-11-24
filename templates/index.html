@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reel Seek Engine</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Reel Seek Engine</h1>
+        <p class="text-center">Start typing to search for your favorite movies. You can add up to 5 movies and you need at least 3 to search. If the movie you have entered isn't in the list, specify the release year.</p>
+
+        <form method="POST" action="/">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="movieSearch" class="form-label">Search for Movies</label>
+                    <input type="text" class="form-control" id="movieSearch" placeholder="Enter movie title">
+                </div>
+                <div class="col-md-6">
+                    <label for="yearSearch" class="form-label">Specify Year (Optional)</label>
+                    <input type="text" class="form-control" id="yearSearch" placeholder="Enter year">
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <ul id="selectedMovies" class="list-group"></ul>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="searchButton">Get Recommendations</button>
+        </form>
+
+        <div class="mt-5">
+            <h3>Top 10 Recommended Movies:</h3>
+            {% if recommendations %}
+                <ul class="list-group">
+                    {% for recommendation in recommendations %}
+                        <li class="list-group-item">{{ recommendation }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No recommendations available. Please enter your favorite movies above.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let selectedMovies = [];
+            const maxMovies = 5;
+
+            $("#movieSearch").autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: "/autocomplete",
+                        type: "GET",
+                        data: { term: request.term, year: $("#yearSearch").val() },
+                        success: function(data) {
+                            response(data);
+                        }
+                    });
+                },
+                minLength: 2,
+                select: function(event, ui) {
+                    if (selectedMovies.length < maxMovies) {
+                        selectedMovies.push(ui.item);
+                        updateSelectedMovies();
+                    } else {
+                        alert("You can only add up to 5 movies.");
+                    }
+                    $("#movieSearch").val("");
+                    $("#yearSearch").val("");
+                    return false;
+                }
+            });
+
+            function updateSelectedMovies() {
+                const $selectedMoviesList = $("#selectedMovies");
+                $selectedMoviesList.empty();
+                selectedMovies.forEach((movie, index) => {
+                    $selectedMoviesList.append(
+                        `<li class="list-group-item d-flex justify-content-between align-items-center">
+                            ${movie.label}
+                            <button type="button" class="btn btn-danger btn-sm" onclick="removeMovie(${index})">Remove</button>
+                        </li>`
+                    );
+                });
+            }
+
+            window.removeMovie = function(index) {
+                selectedMovies.splice(index, 1);
+                updateSelectedMovies();
+            };
+
+            $("#searchButton").click(function(e) {
+                if (selectedMovies.length < 3) {
+                    e.preventDefault();
+                    alert("Please select at least 3 movies.");
+                } else {
+                    $("form").append(
+                        selectedMovies.map((movie, i) =>
+                            `<input type="hidden" name="title${i + 1}" value="${movie.value}">
+                             <input type="hidden" name="year${i + 1}" value="${movie.year}">`
+                        ).join("")
+                    );
+                }
+            });
+        });
+    </script>
+</body>
+</html>
